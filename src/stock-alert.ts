@@ -34,7 +34,19 @@ export function buildSlackMessage(input: SlackMessageInput): string {
     (storeReport) => storeReport.availableProducts.length > 0,
   );
 
-  const storeLines = input.storeReports
+  const sortedStoreReports = [...input.storeReports].sort((leftStoreReport, rightStoreReport) => {
+    const leftHasStock = leftStoreReport.availableProducts.length > 0;
+    const rightHasStock = rightStoreReport.availableProducts.length > 0;
+
+    if (leftHasStock === rightHasStock) {
+      return 0;
+    }
+
+    return leftHasStock ? -1 : 1;
+  });
+
+  const availableStoreLines = sortedStoreReports
+    .filter((storeReport) => storeReport.availableProducts.length > 0)
     .map((storeReport) => {
       const allProducts = [
         ...storeReport.availableProducts,
@@ -55,17 +67,26 @@ export function buildSlackMessage(input: SlackMessageInput): string {
         .replace("트레이더스 홀세일 클럽 ", "")
         .replace("점", "");
 
-      return [
-        storeReport.availableProducts.length > 0 ? `- ${storeLabel} 재고 있음` : `- ${storeLabel}`,
-        `  ${productSummary}`,
-      ].join("\n");
+      return `- ✅ ${storeLabel}: ${productSummary}`;
     })
     .join("\n\n");
 
-  return [
-    hasAnyStock ? "@channel :rotating_light: 트레이더스 스위치2 재고 감지" : ":eyes: 트레이더스 스위치2 재고 현황",
-    `조회 시각: ${input.checkedAt}`,
-    "",
-    storeLines,
-  ].join("\n");
+  const unavailableStoreLabels = sortedStoreReports
+    .filter((storeReport) => storeReport.availableProducts.length === 0)
+    .map((storeReport) =>
+      storeReport.storeName
+        .replace("트레이더스 홀세일 클럽 ", "")
+        .replace("점", ""),
+    );
+
+  const unavailableStoreLine =
+    unavailableStoreLabels.length > 0
+      ? `- ❌ ${unavailableStoreLabels.join(", ")}`
+      : "";
+
+  const storeLines = [availableStoreLines, unavailableStoreLine]
+    .filter(Boolean)
+    .join("\n\n");
+
+  return hasAnyStock ? `@channel\n${storeLines}` : storeLines;
 }

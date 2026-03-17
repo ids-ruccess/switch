@@ -74,9 +74,9 @@ describe("슬랙 메시지 생성", () => {
     });
 
     expect(message).toContain("@channel");
-    expect(message).toContain("마곡");
+    expect(message).toContain("- ✅ 마곡: 일반판 2개");
     expect(message).toContain("일반판 2개");
-    expect(message).toContain("2026-03-17T16:30:00+09:00");
+    expect(message).not.toContain("조회 시각");
   });
 
   it("재고가 없어도 각 지점별 품절 현황을 계속 보여준다", () => {
@@ -111,9 +111,63 @@ describe("슬랙 메시지 생성", () => {
     });
 
     expect(message).not.toContain("@channel");
-    expect(message).toContain("마곡");
-    expect(message).toContain("고양");
-    expect(message).toContain("일반판 없음");
-    expect(message).toContain("마카세트 없음");
+    expect(message).toContain("- ❌ 마곡, 고양");
+    expect(message).not.toContain("일반판 없음");
+  });
+
+  it("재고 있는 지점을 품절 지점보다 먼저 정렬한다", () => {
+    const message = buildSlackMessage({
+      checkedAt: "2026-03-17T16:30:00+09:00",
+      storeReports: [
+        {
+          storeName: "트레이더스 홀세일 클럽 고양점",
+          availableProducts: [],
+          unavailableProducts: [
+            {
+              name: "스위치2 본체 (일반판)",
+              skuCode: "4902370552690",
+              stockQty: 0,
+              stockStatus: "NO_STOCK",
+            },
+          ],
+        },
+        {
+          storeName: "트레이더스 홀세일 클럽 마곡점",
+          availableProducts: [
+            {
+              name: "스위치2 본체 (일반판)",
+              skuCode: "4902370552690",
+              stockQty: 1,
+              stockStatus: "LOW_STOCK",
+            },
+          ],
+          unavailableProducts: [],
+        },
+      ],
+    });
+
+    expect(message.indexOf("- ✅ 마곡: 일반판 1개")).toBeLessThan(
+      message.indexOf("- ❌ 고양"),
+    );
+  });
+
+  it("여러 품절 지점을 한 줄로 묶는다", () => {
+    const message = buildSlackMessage({
+      checkedAt: "2026-03-17T16:30:00+09:00",
+      storeReports: [
+        {
+          storeName: "트레이더스 홀세일 클럽 고양점",
+          availableProducts: [],
+          unavailableProducts: [],
+        },
+        {
+          storeName: "트레이더스 홀세일 클럽 일산점",
+          availableProducts: [],
+          unavailableProducts: [],
+        },
+      ],
+    });
+
+    expect(message).toContain("❌ 고양, 일산");
   });
 });
