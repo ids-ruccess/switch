@@ -2,9 +2,7 @@ name: Check Traders Switch 2 Stock
 
 on:
   schedule:
-    - cron: "3,13,23,33,43,53 * * * *"
-  workflow_dispatch:
-
+    - cron: "3,13,23,33,43,53 * * * *" 
 jobs:
   check-stock:
     runs-on: ubuntu-latest
